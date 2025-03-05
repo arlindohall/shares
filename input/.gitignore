@@ -1,0 +1,5 @@
+# Ignore input directory (this dir)
+*
+
+# Don't ignore the gitignore so that the "ignore" behavior is shared
+!.gitignore
