@@ -33,6 +33,11 @@ class Report
       short_term = events.reject(&:long_term?)
       long_term = events.filter(&:long_term?)
 
+      warn "=== Year #{year}"
+      warn short_term.map(&:gains)
+      warn "Long term gains: #{long_term.map(&:gains).sum.truncate_dollars}"
+      warn "Short term gains: #{short_term.map(&:gains).sum.truncate_dollars}"
+
       if short_term.any?
         warn "=== #{year} Short Term"
         warn short_term.map(&:to_json)

@@ -26,4 +26,4 @@ end
 Report.new(
   transactions: transactions,
   taxable_event_history: TaxableEvents.new(transactions).history
-).summary
+).full_report
