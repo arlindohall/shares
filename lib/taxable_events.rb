@@ -16,10 +16,11 @@ class TaxableEvents
     end
 
     def long_term?
-      it.sale_date - it.acquisition_date > SECONDS_IN_YEAR
+      sale_date - acquisition_date > SECONDS_IN_YEAR
     end
 
-    def profits
+    def gains
+      number_of_shares * (sale_price - cost_basis)
     end
   end
 

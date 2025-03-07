@@ -4,6 +4,7 @@ require 'json'
 require 'nokogiri'
 
 require_relative 'lib/vest'
+require_relative 'lib/report'
 require_relative 'lib/sale'
 require_relative 'lib/taxable_events'
 
@@ -15,26 +16,14 @@ transactions = [Vest, Sale]
                .flat_map { |cls| cls.find_all(html) }
                .sort_by(&:date)
 
-warn '--- Transactions'
-warn transactions.map(&:to_json)
-
-taxable_event_history = TaxableEvents.new(transactions).history
-warn '--- Taxable Events'
-warn taxable_event_history.map(&:to_json)
-
-warn '--- Yearly report (ignoring wash)'
-taxable_event_history.group_by { it.sale_date.year }
-                     .each do |year, events|
-  short_term = events.reject(&:long_term?)
-  long_term = events.filter(&:long_term?)
-
-  if short_term.any?
-    warn "=== #{year} Short Term"
-    warn short_term.map(&:to_json)
-  end
-
-  if long_term.any?
-    warn "=== #{year} Long Term"
-    warn long_term.map(&:to_json)
+# Monkey patch floats to get money
+class Numeric
+  def truncate_dollars
+    (self * 100).floor.to_f / 100
   end
 end
+
+Report.new(
+  transactions: transactions,
+  taxable_event_history: TaxableEvents.new(transactions).history
+).summary
