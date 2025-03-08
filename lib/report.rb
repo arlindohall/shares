@@ -2,8 +2,8 @@ class Report
   class ReportBuilder
     def initialize(report, data, out: STDERR, additional_headers: nil)
       @report = report
-      @out = out
       @data = data
+      @out = out
       @additional_headers = additional_headers
     end
 
@@ -48,7 +48,7 @@ class Report
     ]
 
     def self.column_widths = [
-      12, 30, 20, 20, 24, 24
+      6, 22, 17, 22, 11, 11
     ]
 
     def initialize(transactions)
@@ -70,11 +70,11 @@ class Report
     ]
 
     def self.column_widths = [
-      20, 24, 30, 24, 30
+      17, 11, 22, 11, 22
     ]
 
     def initialize(taxable_event_history)
-      @taxable_event_history
+      @taxable_event_history = taxable_event_history
     end
 
     def puts
@@ -106,7 +106,7 @@ class Report
     def puts
       ReportBuilder.new(
         self.class,
-        @events,
+        @events.map(&:yearly_report_event),
         additional_headers: <<~HEADER
           === YEAR SUMMARY #{@year} ===
           Total short term: #{short_term.map(&:gains).sum.truncate_dollars}
@@ -132,7 +132,7 @@ class Report
     @taxable_event_history = taxable_event_history
   end
 
-  def transactions
+  def all_transactions
     TransactionReport.new(transactions).puts
   end
 

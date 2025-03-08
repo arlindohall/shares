@@ -33,7 +33,9 @@ case Args.report
 when 'history'
   report.history
 when 'transactions'
-  report.transactions
-else
+  report.all_transactions
+when 'full', 'full_report', nil
   report.full_report
+else
+  raise "Unknown report type #{Args.report}"
 end
