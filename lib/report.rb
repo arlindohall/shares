@@ -141,8 +141,12 @@ class Report
   end
 
   def full_report
-    by_year.each do |year, events|
-      YearlyReport.new(year, events).puts
+    if Args.report_year
+      YearlyReport.new(Args.report_year, by_year[Args.report_year]).puts
+    else
+      by_year.each do |year, events|
+        YearlyReport.new(year, events).puts
+      end
     end
   end
 
