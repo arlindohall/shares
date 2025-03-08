@@ -11,13 +11,21 @@ class TaxableEvents
       @sale_date = sale_date
     end
 
-    def to_json
-      {number_of_shares:, cost_basis:, acquisition_date:, sale_price:, sale_date:}.to_json
-    end
-
     def long_term?
       sale_date - acquisition_date > SECONDS_IN_YEAR
     end
+
+    def row = [
+      number_of_shares,
+      acquisition_date.iso8601,
+      sale_date.iso8601,
+      number_of_shares * sale_price,
+      number_of_shares * cost_basis,
+      'unknown', # TODO: calculate wash sale below and store here
+      'unknown',
+      long_term? ? :long_term : :short_term
+
+    ]
 
     def gains
       number_of_shares * (sale_price - cost_basis)
@@ -38,36 +46,28 @@ class TaxableEvents
       @lots - lots_still_held
     end
 
-    def debug
-      warn "---"
-      # warn "Lots..."
-      # @lots.each { warn it.to_json }
-      warn "Lots stil held..."
-      lots_still_held.each { warn it.to_json }
-    end
-
     private
 
     def track_vested_lots(event)
       return unless event.vest?
+
       @lots << Lot.new(
         number_of_shares: event.number_of_shares,
         cost_basis: event.cost_basis,
-        acquisition_date: event.date,
+        acquisition_date: event.date
       )
       @lots << Lot.new(
         number_of_shares: event.shares_sold_for_taxes,
         cost_basis: event.cost_basis,
         acquisition_date: event.date,
         sale_price: event.sale_price,
-        sale_date: event.date,
+        sale_date: event.date
       )
     end
 
     def track_sold_lots(event)
       return if event.vest?
 
-      # warn "Looking for sold lots, sale_amt=#{event.number_of_shares}, ", lots_still_held.map(&:to_json)
       find_lots(event.number_of_shares).each do
         it.sale_date = event.date
         it.sale_price = event.sale_price
@@ -78,21 +78,22 @@ class TaxableEvents
       return oldest_first(number_of_shares) if oldest_first(number_of_shares)
       return exact_match(number_of_shares) if exact_match(number_of_shares)
 
-      raise "Unable to determine lots sold by oldest-first policy or by matching lot size (lot_size=#{number_of_shares}) available lots:\n#{lots_still_held.map(&:to_json).join("\n")}"
+      raise <<~MESSAGE
+        Unable to determine lots sold by oldest-first policy or by matching lot size (lot_size=#{number_of_shares}) available lots:
+          #{Report::TaxableEventList.headers}
+          #{lots_still_held.map(&:row).join("\n")}
+      MESSAGE
     end
 
     def exact_match(number_of_shares)
       matches = @lots.filter { is_delta?(it.number_of_shares, number_of_shares) }
-      # warn "Testing individual lots sale_amt=#{number_of_shares}, ", matches.map(&:to_json)
 
       matches.first if matches.size == 1
     end
 
     def oldest_first(number_of_shares)
-      # warn "Lots still held, ", lots_still_held.map(&:to_json)
       lots_still_held.size.times do |batch_size|
         batch = lots_still_held.take(batch_size + 1)
-        # warn "Testing batch: sale_amt=#{number_of_shares}, ", batch.map(&:to_json)
 
         return batch if is_delta?(batch.map(&:number_of_shares).sum, number_of_shares)
       end

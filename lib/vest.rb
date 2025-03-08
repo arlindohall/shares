@@ -7,11 +7,11 @@ class Vest
     @html = html
   end
 
-  def to_json
-    {type: 'vest', date: date.iso8601, number_of_shares:, shares_sold_for_taxes:, cost_basis:, sale_price:}.to_json
-  end
-
   def vest? = true
+
+  def row = [
+    'vest', date.iso8601, number_of_shares, shares_sold_for_taxes, cost_basis, sale_price
+  ]
 
   def date
     src = @html.at('td:contains("Settlement Date")').next_element

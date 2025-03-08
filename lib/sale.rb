@@ -8,11 +8,11 @@ class Sale
     @sale_breakdown = html.next_element
   end
 
-  def to_json
-    {type: 'sale', date: date.iso8601, number_of_shares:, sale_price:}.to_json
-  end
-
   def vest? = false
+
+  def row = [
+    'sale', date.iso8601, number_of_shares, nil, nil, sale_price
+  ]
 
   def date
     src = @html.at('td:contains("Settlement Date")').next_element

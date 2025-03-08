@@ -3,6 +3,7 @@
 require 'json'
 require 'nokogiri'
 
+require_relative 'lib/args'
 require_relative 'lib/vest'
 require_relative 'lib/report'
 require_relative 'lib/sale'
@@ -23,7 +24,16 @@ class Numeric
   end
 end
 
-Report.new(
+report = Report.new(
   transactions: transactions,
   taxable_event_history: TaxableEvents.new(transactions).history
-).full_report
+)
+
+case Args.report
+when 'history'
+  report.history
+when 'transactions'
+  report.transactions
+else
+  report.full_report
+end
