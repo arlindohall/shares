@@ -48,7 +48,7 @@ class Report
     ]
 
     def self.column_widths = [
-      6, 22, 17, 22, 11, 11
+      6, 11, 17, 22, 11, 11
     ]
 
     def initialize(transactions)
@@ -70,7 +70,7 @@ class Report
     ]
 
     def self.column_widths = [
-      17, 11, 22, 11, 22
+      17, 11, 17, 11, 12
     ]
 
     def initialize(taxable_event_history)
@@ -95,7 +95,7 @@ class Report
     ]
 
     def self.column_widths = [
-      12, 24, 24, 12, 12, 26, 21, 22
+      12, 14, 12, 12, 12, 26, 21, 22
     ]
 
     def initialize(year, events)

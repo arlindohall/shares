@@ -1,13 +1,15 @@
 class TaxableEvents
   class YearlyReportEvent
+    attr_reader :lot
+
     def initialize(lot)
       @lot = lot
     end
 
     def row = [
       lot.number_of_shares,
-      lot.acquisition_date.iso8601,
-      lot.sale_date.iso8601,
+      lot.acquisition_date.iso8601_date,
+      lot.sale_date.iso8601_date,
       lot.number_of_shares * lot.sale_price,
       lot.number_of_shares * lot.cost_basis,
       'unknown', # TODO: calculate wash sale below and store here
@@ -37,9 +39,9 @@ class TaxableEvents
     def row = [
       number_of_shares,
       cost_basis,
-      acquisition_date.iso8601,
+      acquisition_date.iso8601_date,
       sale_price,
-      sale_date.iso8601
+      sale_date.iso8601_date
     ]
 
     def gains

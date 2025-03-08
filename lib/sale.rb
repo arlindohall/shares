@@ -11,7 +11,7 @@ class Sale
   def vest? = false
 
   def row = [
-    'sale', date.iso8601, number_of_shares, nil, nil, sale_price
+    'sale', date.iso8601_date, number_of_shares, nil, nil, sale_price
   ]
 
   def date

@@ -24,6 +24,13 @@ class Numeric
   end
 end
 
+# Monkey patch date with dumb formatter
+class Time
+  def iso8601_date
+    [year, month.to_s.rjust(2, '0'), day.to_s.rjust(2, '0')].join('-')
+  end
+end
+
 report = Report.new(
   transactions: transactions,
   taxable_event_history: TaxableEvents.new(transactions).history
