@@ -67,10 +67,11 @@ class Report
       Acquisition_date
       Sale_price
       Sale_date
+      Long_term_equity?
     ]
 
     def self.column_widths = [
-      17, 11, 17, 11, 12
+      17, 11, 17, 11, 12, 18
     ]
 
     def initialize(taxable_event_history)
@@ -78,7 +79,11 @@ class Report
     end
 
     def puts
-      ReportBuilder.new(self.class, @taxable_event_history).build_and_puts
+      ReportBuilder.new(
+        self.class,
+        @taxable_event_history
+          .sort_by { [it.sale_date.to_i, it.acquisition_date.to_i] }
+      ).build_and_puts
     end
   end
 
@@ -103,17 +108,58 @@ class Report
       @events = events
     end
 
+    def totals_table(short_term, long_term)
+      short_term = %i[gains proceeds cost].map do |field|
+        short_term.map(&field).sum.truncate_dollars.to_s.ljust(16)
+      end.join
+      long_term = %i[gains proceeds cost].map do |field|
+        long_term.map(&field).sum.truncate_dollars.to_s.ljust(16)
+      end.join
+
+      <<~TABLE
+        --- Totals ---
+        Type        Gains           Proceeds        Cost_basis
+        short_term  #{short_term}
+        long_term   #{long_term}
+      TABLE
+    end
+
     def puts
+      warn <<~HEADER
+        === YEAR SUMMARY #{@year} ===
+        #{totals_table(short_term, long_term)}
+
+      HEADER
+
+      warn <<~HEADER
+        === 1099 Fields for sales since tracking started ===
+            This includes sell-to-cover (because acquisition_date is known)
+        #{totals_table(short_term.filter(&:reporting_era?), long_term.filter(&:reporting_era?))}
+
+      HEADER
+      warn
       ReportBuilder.new(
         self.class,
-        @events.map(&:yearly_report_event),
-        additional_headers: <<~HEADER
-          === YEAR SUMMARY #{@year} ===
-          Total short term: #{short_term.map(&:gains).sum.truncate_dollars}
-          Total long term: #{long_term.map(&:gains).sum.truncate_dollars}
-          --- YEAR DETAILS ---
-        HEADER
+        sorted_yearly_events.filter(&:reporting_era?).map(&:yearly_report_event)
       ).build_and_puts
+
+      warn <<~HEADER
+
+        === 1099 Fields for sales before tracking started, reported on 1099 as "Undetermined holdin period" ===
+            These will not have a cost basis reported
+        #{totals_table(short_term.reject(&:reporting_era?), long_term.reject(&:reporting_era?))}
+
+        --- YEAR DETAILS ---
+      HEADER
+      ReportBuilder.new(
+        self.class,
+        sorted_yearly_events.reject(&:reporting_era?).map(&:yearly_report_event)
+      ).build_and_puts
+    end
+
+    def sorted_yearly_events
+      @events
+        .sort_by { [it.sale_date.to_i, it.acquisition_date.to_i] }
     end
 
     def long_term

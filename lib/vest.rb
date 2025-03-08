@@ -14,6 +14,12 @@ class Vest
   ]
 
   def date
+    src = @html.at('td:contains("Release Date")').next_element
+    day, month, year = src.text.strip.split('-')
+    Time.utc(year, month, day)
+  end
+
+  def settlement_date
     src = @html.at('td:contains("Settlement Date")').next_element
     day, month, year = src.text.strip.split('-')
     Time.utc(year, month, day)
@@ -37,5 +43,11 @@ class Vest
   def sale_price
     src = @html.at('td:contains("Sale Price")').next_element
     src.text.gsub(/[^0-9.]/, '').to_f
+  end
+
+  def grant_date
+    src = @html.at('td:contains("Grant Date")').next_element
+    day, month, year = src.text.strip.split('-')
+    Time.utc(year, month, day)
   end
 end

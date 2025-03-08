@@ -10,22 +10,25 @@ class TaxableEvents
       lot.number_of_shares,
       lot.acquisition_date.iso8601_date,
       lot.sale_date.iso8601_date,
-      lot.number_of_shares * lot.sale_price,
-      lot.number_of_shares * lot.cost_basis,
-      'unknown', # TODO: calculate wash sale below and store here
-      'unknown',
-      lot.long_term? ? :long_term : :short_term
+      lot.proceeds,
+      lot.cost,
+      lot.proceeds - lot.cost,
+      lot.is_wash,
+      lot.long_term? ? :long_term_gains : :short_term_gains
     ]
   end
 
   class Lot
-    attr_reader :number_of_shares, :cost_basis, :acquisition_date
-    attr_accessor :sale_price, :sale_date
+    attr_reader :number_of_shares, :cost_basis, :acquisition_date, :grant_date, :is_for_tax
+    attr_accessor :sale_price, :sale_date, :is_wash, :is_lte
 
-    def initialize(number_of_shares:, cost_basis:, acquisition_date:, sale_price: nil, sale_date: nil)
+    def initialize(number_of_shares:, cost_basis:, grant_date:, acquisition_date:, is_for_tax:, sale_price: nil,
+                   sale_date: nil)
       @number_of_shares = number_of_shares
       @cost_basis = cost_basis
+      @grant_date = grant_date
       @acquisition_date = acquisition_date
+      @is_for_tax = is_for_tax
       @sale_price = sale_price
       @sale_date = sale_date
     end
@@ -41,15 +44,33 @@ class TaxableEvents
       cost_basis,
       acquisition_date.iso8601_date,
       sale_price,
-      sale_date.iso8601_date
+      sale_date.iso8601_date,
+      is_lte
     ]
 
     def gains
-      number_of_shares * (sale_price - cost_basis)
+      proceeds - cost
+    end
+
+    def proceeds
+      number_of_shares * sale_price
+    end
+
+    def cost
+      number_of_shares * cost_basis
+    end
+
+    def reporting_era?
+      # This is how MS defined shares that WILL NOT be tracked
+      return true if is_for_tax
+
+      acquisition_date >= Time.utc(2024, 7, 25)
     end
   end
 
   class Account
+    THIRTY_DAYS_SECONDS = 3600 * 24 * 30
+
     def initialize
       @lots = []
     end
@@ -63,6 +84,21 @@ class TaxableEvents
       @lots - lots_still_held
     end
 
+    def compute_lte_and_wash
+      @lots.each do |lot|
+        lot.is_wash = @lots.any? do |other|
+          next false if lot.sale_date.nil?
+
+          (other.acquisition_date - lot.sale_date).abs < THIRTY_DAYS_SECONDS
+        end
+
+        # TODO: Should be able to tell if LTE because the number of shares will be the same as
+        # a batch of vests going back to the grant date, vs for quarterly, will be same as
+        # the quarter's worth of shares, and grant date will be within three months
+        lot.is_lte = 'unknown'
+      end
+    end
+
     private
 
     def track_vested_lots(event)
@@ -71,14 +107,18 @@ class TaxableEvents
       @lots << Lot.new(
         number_of_shares: event.number_of_shares,
         cost_basis: event.cost_basis,
-        acquisition_date: event.date
+        acquisition_date: event.date,
+        grant_date: event.grant_date,
+        is_for_tax: false
       )
       @lots << Lot.new(
         number_of_shares: event.shares_sold_for_taxes,
         cost_basis: event.cost_basis,
         acquisition_date: event.date,
+        grant_date: event.grant_date,
         sale_price: event.sale_price,
-        sale_date: event.date
+        sale_date: event.date,
+        is_for_tax: true
       )
     end
 
@@ -137,6 +177,8 @@ class TaxableEvents
     @transactions.each do |transaction|
       account << transaction
     end
+
+    account.compute_lte_and_wash
 
     account.sold_lots.sort_by(&:sale_date)
   end
