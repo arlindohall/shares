@@ -50,4 +50,20 @@ class Vest
     day, month, year = src.text.strip.split('-')
     Time.utc(year, month, day)
   end
+
+  def brokerage_fees
+    com = fees.at('td:contains("Brokerage Commission")').next_element
+    sup = fees.at('td:contains("Supplemental Transaction Fee")').next_element
+
+    [com, sup]
+      .map(&:text)
+      .map { it.gsub(/[^0-9.]/, '').to_f }
+      .sum
+  end
+
+  private
+
+  def fees
+    @html.next_element
+  end
 end

@@ -126,30 +126,32 @@ class Report
 
     def puts
       warn <<~HEADER
+        =============================
         === YEAR SUMMARY #{@year} ===
+        =============================
         #{totals_table(short_term, long_term)}
-
       HEADER
 
+      warn
       warn <<~HEADER
         === 1099 Fields for sales since tracking started ===
             This includes sell-to-cover (because acquisition_date is known)
         #{totals_table(short_term.filter(&:reporting_era?), long_term.filter(&:reporting_era?))}
 
+        --- Reported (should match 1099) ---
       HEADER
-      warn
       ReportBuilder.new(
         self.class,
         sorted_yearly_events.filter(&:reporting_era?).map(&:yearly_report_event)
       ).build_and_puts
 
+      warn
       warn <<~HEADER
-
         === 1099 Fields for sales before tracking started, reported on 1099 as "Undetermined holdin period" ===
             These will not have a cost basis reported
         #{totals_table(short_term.reject(&:reporting_era?), long_term.reject(&:reporting_era?))}
 
-        --- YEAR DETAILS ---
+        --- Unreported (proceeds should match, cost basis is missing) ---
       HEADER
       ReportBuilder.new(
         self.class,

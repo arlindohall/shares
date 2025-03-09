@@ -19,15 +19,16 @@ class TaxableEvents
   end
 
   class Lot
-    attr_reader :number_of_shares, :cost_basis, :acquisition_date, :grant_date, :is_for_tax
+    attr_reader :number_of_shares, :cost_basis, :acquisition_date, :grant_date, :brokerage_fees, :is_for_tax
     attr_accessor :sale_price, :sale_date, :is_wash, :is_lte
 
-    def initialize(number_of_shares:, cost_basis:, grant_date:, acquisition_date:, is_for_tax:, sale_price: nil,
+    def initialize(number_of_shares:, cost_basis:, grant_date:, acquisition_date:, brokerage_fees:, is_for_tax:, sale_price: nil,
                    sale_date: nil)
       @number_of_shares = number_of_shares
       @cost_basis = cost_basis
       @grant_date = grant_date
       @acquisition_date = acquisition_date
+      @brokerage_fees = brokerage_fees
       @is_for_tax = is_for_tax
       @sale_price = sale_price
       @sale_date = sale_date
@@ -45,14 +46,19 @@ class TaxableEvents
       acquisition_date.iso8601_date,
       sale_price,
       sale_date.iso8601_date,
+      brokerage_fees,
       is_lte
     ]
 
     def gains
-      proceeds - cost
+      gross - cost
     end
 
     def proceeds
+      gross - brokerage_fees
+    end
+
+    def gross
       number_of_shares * sale_price
     end
 
@@ -109,6 +115,7 @@ class TaxableEvents
         cost_basis: event.cost_basis,
         acquisition_date: event.date,
         grant_date: event.grant_date,
+        brokerage_fees: event.brokerage_fees,
         is_for_tax: false
       )
       @lots << Lot.new(
@@ -116,9 +123,10 @@ class TaxableEvents
         cost_basis: event.cost_basis,
         acquisition_date: event.date,
         grant_date: event.grant_date,
+        brokerage_fees: event.brokerage_fees,
+        is_for_tax: true,
         sale_price: event.sale_price,
-        sale_date: event.date,
-        is_for_tax: true
+        sale_date: event.date
       )
     end
 

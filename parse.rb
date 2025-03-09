@@ -20,7 +20,7 @@ transactions = [Vest, Sale]
 # Monkey patch floats to get money
 class Numeric
   def truncate_dollars
-    (self * 100).floor.to_f / 100
+    (self * 100).round.to_f / 100
   end
 end
 

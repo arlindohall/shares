@@ -29,4 +29,21 @@ class Sale
     src = @html.at('td:contains("Market Price Per Unit")').next_element
     src.text.gsub(/[^0-9.]/, '').to_f
   end
+
+  def brokerage_fees
+    com = fees.at('td:contains("Brokerage Commission")').next_element
+    sup = fees.at('td:contains("Supplemental Transaction Fee")').next_element
+    wire = fees.at('td:contains("Wire Fee")').next_element
+
+    [com, sup, wire]
+      .map(&:text)
+      .map { it.gsub(/[^0-9.]/, '').to_f }
+      .sum
+  end
+
+  private
+
+  def fees
+    @html.next_element
+  end
 end
