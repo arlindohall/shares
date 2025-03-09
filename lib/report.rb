@@ -109,18 +109,18 @@ class Report
     end
 
     def totals_table(short_term, long_term)
-      short_term = %i[gains proceeds cost].map do |field|
-        short_term.map(&field).sum.truncate_dollars.to_s.ljust(16)
+      short_term = %i[proceeds cost gains].map do |field|
+        short_term.map(&field).sum.truncate_dollars.to_s.ljust(20)
       end.join
-      long_term = %i[gains proceeds cost].map do |field|
-        long_term.map(&field).sum.truncate_dollars.to_s.ljust(16)
+      long_term = %i[proceeds cost gains].map do |field|
+        long_term.map(&field).sum.truncate_dollars.to_s.ljust(20)
       end.join
 
-      <<~TABLE
+      <<~TABLE.strip.then { Args.delimiter ? it.gsub(/(  +)/, Args.delimiter) : it }
         --- Totals ---
-        Type        Gains           Proceeds        Cost_basis
-        short_term  #{short_term}
-        long_term   #{long_term}
+        Type                                  Proceeds            Cost_basis          Gains
+        short_term                            #{short_term}
+        long_term                             #{long_term}
       TABLE
     end
 
@@ -129,34 +129,52 @@ class Report
         =============================
         === YEAR SUMMARY #{@year} ===
         =============================
-        #{totals_table(short_term, long_term)}
       HEADER
+      warn totals_table(short_term, long_term)
+      warn(<<~WASH_TABLE.then { Args.delimiter ? it.gsub(/(  +)/, Args.delimiter) : it })
+        --- Net short-term gains/losses ---
+        Type                                  Amount
+        long_term_wash_losses                 #{long_term.filter(&:is_wash).map(&:gains).filter(&:negative?).sum.truncate_dollars}
+        short_term_wash_losses                #{short_term.filter(&:is_wash).map(&:gains).filter(&:negative?).sum.truncate_dollars}
+        long_term_non_wash_losses             #{long_term.reject(&:is_wash).map(&:gains).filter(&:negative?).sum.truncate_dollars}
+        short_term_non_wash_losses            #{short_term.reject(&:is_wash).map(&:gains).filter(&:negative?).sum.truncate_dollars}
+        long_term_gains                       #{long_term.map(&:gains).filter(&:positive?).sum.truncate_dollars}
+        short_term_gains                      #{short_term.map(&:gains).filter(&:positive?).sum.truncate_dollars}
+      WASH_TABLE
 
-      warn
       warn <<~HEADER
+
         === 1099 Fields for sales since tracking started ===
             This includes sell-to-cover (because acquisition_date is known)
-        #{totals_table(short_term.filter(&:reporting_era?), long_term.filter(&:reporting_era?))}
-
-        --- Reported (should match 1099) ---
+        --- Reported: short term (should match 1099) ---
       HEADER
       ReportBuilder.new(
         self.class,
-        sorted_yearly_events.filter(&:reporting_era?).map(&:yearly_report_event)
+        short_term.filter(&:reporting_era?).map(&:yearly_report_event)
+      ).build_and_puts
+      warn totals_table(short_term.filter(&:reporting_era?), long_term.filter(&:reporting_era?))
+
+      warn <<~HEADER
+        --- Reported: long term (should match 1099) ---
+      HEADER
+      ReportBuilder.new(
+        self.class,
+        long_term.filter(&:reporting_era?).map(&:yearly_report_event)
       ).build_and_puts
 
-      warn
       warn <<~HEADER
-        === 1099 Fields for sales before tracking started, reported on 1099 as "Undetermined holdin period" ===
-            These will not have a cost basis reported
-        #{totals_table(short_term.reject(&:reporting_era?), long_term.reject(&:reporting_era?))}
 
+        === 1099 Fields for sales before tracking started, reported on 1099 as "Undetermined holdin period" ===
+            These will not have a cost basis reported, and should be reoprted as short/long term based on the lot they were acquired from
+            Note: to report as a loss, it must not be a "wash" sale (every sale is a wash if you vest monthly)
+            Note: you can carry-over wash losses, but you must report them as such on each year of taxes until you have a year that's not a wash
         --- Unreported (proceeds should match, cost basis is missing) ---
       HEADER
       ReportBuilder.new(
         self.class,
         sorted_yearly_events.reject(&:reporting_era?).map(&:yearly_report_event)
       ).build_and_puts
+      warn totals_table(short_term.reject(&:reporting_era?), long_term.reject(&:reporting_era?))
     end
 
     def sorted_yearly_events
@@ -192,8 +210,14 @@ class Report
     if Args.report_year
       YearlyReport.new(Args.report_year, by_year[Args.report_year]).puts
     else
-      by_year.each do |year, events|
+      last_year = by_year.keys.max # For formatting
+      by_year
+        .sort_by { |year, events| year }
+        .each do |year, events|
         YearlyReport.new(year, events).puts
+        break if year == last_year
+
+        warn ''
       end
     end
   end

@@ -1,4 +1,8 @@
 class Args
+  DELIMITERS = {
+    ',' => ',',
+    't' => "\t"
+  }
   def self.method_missing(name, *_args)
     @instance ||= new.parse!
     return @instance.send(name) if @instance.methods.include?(name)
@@ -14,7 +18,8 @@ class Args
     until @argv.empty?
       case arg = @argv.shift
       when '--delimiter', '-d'
-        @delimiter = @argv.shift
+        delimiter_name = @argv.shift
+        @delimiter = DELIMITERS[delimiter_name] || (raise "Invalid delmiter name#{delimiter_name}")
       when '--strategy', '-s'
         raise 'Not implemented: strategies other than fifo with fallback to exact_match'
       when '--report', '-r'

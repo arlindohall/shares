@@ -12,7 +12,7 @@ class TaxableEvents
       lot.sale_date.iso8601_date,
       lot.proceeds,
       lot.cost,
-      lot.proceeds - lot.cost,
+      [lot.proceeds - lot.cost, 0].min,
       lot.is_wash,
       lot.long_term? ? :long_term_gains : :short_term_gains
     ]
