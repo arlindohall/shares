@@ -1,8 +1,4 @@
 class Args
-  DELIMITERS = {
-    ',' => ',',
-    't' => "\t"
-  }
   def self.method_missing(name, *_args)
     @instance ||= new.parse!
     return @instance.send(name) if @instance.methods.include?(name)
@@ -15,11 +11,13 @@ class Args
   end
 
   def parse!
+    # Defaults
+    @delimiter = 't'
+
     until @argv.empty?
       case arg = @argv.shift
       when '--delimiter', '-d'
-        delimiter_name = @argv.shift
-        @delimiter = DELIMITERS[delimiter_name] || (raise "Invalid delmiter name#{delimiter_name}")
+        @delimiter = @argv.shift.strip
       when '--strategy', '-s'
         raise 'Not implemented: strategies other than fifo with fallback to exact_match'
       when '--report', '-r'
@@ -40,6 +38,14 @@ class Args
     warn message
     warn 'Usage: parse.rb [--help | --delimiter <delim> | --strategy <strat> | --report <rep> (year)]'
     abort
+  end
+
+  def delimiter_char
+    case delimiter
+    when 's' then ' '
+    when 't', 'tv' then "\t"
+    when 'c' then ','
+    end
   end
 
   def help

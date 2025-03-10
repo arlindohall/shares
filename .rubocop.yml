@@ -1,3 +1,19 @@
 AllCops:
   TargetRubyVersion: 3.4
   NewCops: disable
+Metrics/AbcSize:
+  Enabled: false
+Metrics/CyclomaticComplexity:
+  Enabled: false
+Metrics/MethodLength:
+  Enabled: false
+Metrics/PerceivedComplexity:
+  Enabled: false
+Style/FrozenStringLiteralComment:
+  Enabled: false
+Metrics/ParameterLists:
+  Enabled: false
+Layout/LineLength:
+  Enabled: false
+Style/Documentation:
+  Enabled: false

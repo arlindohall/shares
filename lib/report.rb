@@ -1,39 +1,52 @@
 class Report
   class ReportBuilder
-    def initialize(report, data, out: STDERR, additional_headers: nil)
+    def initialize(report, data, out: STDERR)
       @report = report
       @data = data
       @out = out
-      @additional_headers = additional_headers
     end
 
     def build_and_puts
-      @out.puts @additional_headers if @additional_headers
+      rows = @data.map do |datum|
+        datum.row.map do |col|
+          next(col) unless col.is_a?(Numeric)
 
-      if Args.delimiter
-        build_and_puts_delimited
-        return
+          col.truncate_dollars
+        end.map(&:to_s)
       end
+      printable_rows = [@report.headers] + rows
+      column_widths = printable_rows
+                      .map { |row| row.map(&:to_s).map(&:size) }
+                      .transpose
+                      .map { [it.max + 1] }
+                      .transpose
+                      .flatten
 
-      @out.puts(@report.headers.zip(@report.column_widths).map { |col, w| col.ljust(w) }.join)
-
-      @data.each do |datum|
-        @out.puts(datum.row.zip(@report.column_widths).map do |col, w|
-          value = col.is_a?(Numeric) ? col.truncate_dollars : col
-          value.to_s.rjust(w - 1).ljust(w)
-        end.join)
+      case Args.delimiter
+      when 'tv'
+        column_widths = column_widths.map { (it / 8.0).ceil * 8 }
+        @out.puts(@report.headers.zip(column_widths).map { |col, w| tab_just(col, w) }.join)
+        rows.each { @out.puts(it.zip(column_widths).map { |cell, w| tab_just(cell, w) }.join) }
+      when 's'
+        @out.puts(@report.headers.zip(column_widths).map { |col, w| space_just(col, w, is_header: true) }.join)
+        rows.each { @out.puts(it.zip(column_widths).map { |cell, w| space_just(cell, w) }.join) }
+      else
+        @out.puts(@report.headers.join(Args.delimiter_char))
+        rows.each { @out.puts(it.join(Args.delimiter_char)) }
       end
     end
 
-    def build_and_puts_delimited
-      @out.puts(@report.headers.join(Args.delimiter))
-      @data.each do |datum|
-        @out.puts(
-          datum.row.map do |col|
-            col.is_a?(Numeric) ? col.truncate_dollars : col
-          end.join(Args.delimiter)
-        )
-      end
+    private
+
+    def space_just(content, width, is_header: false)
+      return content.ljust(width) if is_header
+
+      content.rjust(width - 1).ljust(width)
+    end
+
+    def tab_just(content, width)
+      tabs = "\t" * ((width - content.size) / 8.0).ceil
+      "#{content}#{tabs}"
     end
   end
 
@@ -45,10 +58,6 @@ class Report
       Shares_sold_for_taxes
       Cost_basis
       Sale_price
-    ]
-
-    def self.column_widths = [
-      6, 11, 17, 22, 11, 11
     ]
 
     def initialize(transactions)
@@ -97,10 +106,6 @@ class Report
       'Wash_sale_loss_disallowed',
       'Check_if_not_allowed',
       'Long_term/_short_term'
-    ]
-
-    def self.column_widths = [
-      12, 14, 12, 12, 12, 26, 21, 22
     ]
 
     def initialize(year, events)
@@ -212,7 +217,7 @@ class Report
     else
       last_year = by_year.keys.max # For formatting
       by_year
-        .sort_by { |year, events| year }
+        .sort_by { |year, _events| year }
         .each do |year, events|
         YearlyReport.new(year, events).puts
         break if year == last_year
