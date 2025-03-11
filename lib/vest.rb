@@ -9,6 +9,15 @@ class Vest
 
   def vest? = true
 
+  def self.headers = %w[
+    Type
+    Date
+    Number_of_shares
+    Shares_sold_for_taxes
+    Cost_basis
+    Sale_price
+  ]
+
   def row = [
     'vest', date.iso8601_date, number_of_shares, shares_sold_for_taxes, cost_basis, sale_price
   ]

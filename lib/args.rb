@@ -12,7 +12,7 @@ class Args
 
   def parse!
     # Defaults
-    @delimiter = 't'
+    @delimiter = 'tv'
 
     until @argv.empty?
       case arg = @argv.shift

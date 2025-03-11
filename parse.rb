@@ -3,11 +3,16 @@
 require 'json'
 require 'nokogiri'
 
+require_relative 'lib/account'
 require_relative 'lib/args'
-require_relative 'lib/vest'
+require_relative 'lib/lot'
 require_relative 'lib/report'
+require_relative 'lib/report/report_builder'
+require_relative 'lib/report/yearly_report'
+require_relative 'lib/report/yearly_report_event'
 require_relative 'lib/sale'
 require_relative 'lib/taxable_events'
+require_relative 'lib/vest'
 
 SECONDS_IN_YEAR = 525_600 * 60
 
